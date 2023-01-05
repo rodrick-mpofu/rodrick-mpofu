@@ -1,0 +1,232 @@
+---
+title: "Project 2"
+author: "RodricK Mpofu"
+execute:
+  echo: true
+  warning: false
+output: 
+  theme: darkly
+format: 
+  html:
+    self-contained: true
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+Statement of Integrity: "All work presented is my own, and I have
+followed all rules for collaboration. I have not discussed this project
+with anyone outside of students currently enrolled in this course, and I
+have listed any such students at the top of my project."
+
+Signed by: Rodrick Mpofu
+
+```{r}
+library(readxl); 
+library(tidyverse); 
+library(here)
+prof_evals <- read_excel(here("data/evals_prof_p2.xlsx"))
+univ_evals <- read_csv(here("data/evals_university_p2.csv"))
+univ_evals <- univ_evals |> mutate(meanscore_univ = 7 * `Agree strongly` / 100 + 6 * Agree / 100 +
+    5 * `Agree Somewhat` / 100 + 4 * Neutral / 100 +
+    3 * `Disagree Somewhat` / 100 + 2 * `Disagree` / 100 + 
+    1 * `Disagree Strongly` / 100) |>
+  select(meanscore_univ, Question)
+
+prof_evals <- prof_evals |>
+  mutate(n = `Agree strongly` + Agree + `Agree Somewhat` + Neutral + `Disagree Somewhat` + Disagree + `Disagree Strongly`,
+         meanscore_prof = 7 * `Agree strongly` / n + 6 * Agree / n +
+           5 * `Agree Somewhat` / n + 4 * Neutral / n +
+           3 * `Disagree Somewhat` / n + 2 * `Disagree` / n + 
+           1 * `Disagree Strongly` / n)
+
+evals_df <- left_join(prof_evals, univ_evals, by = "Question")
+evals_df
+```
+
+## Question 1
+
+```{r}
+
+evals_abbrv <-evals_df |> 
+  mutate(Question_abbrv = 
+      fct_recode(Question,
+            `1. Valuable` = 
+              "1. Course has been a valuable educational experience",
+            `2. Organized` = "2. Effectively Organized",
+            `3. Conducive` = "3. Environment Conducive to Learning",
+            `5a. Fair Assessment` = "5a. Fair Assessment of Student work",
+            `5b. Timely Assessment` = "5b. Timely Assessment of Student Work",
+            `5c. Constructive Assessment` = 
+              "5c. Constructive Assessment of Student Work",
+            `6a. Recommend Instructor` = 
+              "6a. Recommend Instructor to another student", 
+            `6b. Recommend Course` = 
+              "6b. Recommend Course to another student",
+            `6c. Effective` = "6c. Instructor was an effective teacher"
+            ))
+
+```
+
+## Question 2
+
+```{r}
+## First separate the course column into course number and section number
+evals_abbrv <- evals_abbrv |> 
+  separate(Course, into = 
+             c("Course Number", "Course Section Number"), sep = "-")
+
+evals_score<- evals_abbrv |> 
+  group_by(Question_abbrv, 
+           `Course Number`, `Course Section Number`, `Term`) |>
+  summarise(avg_score = mean(meanscore_prof), 
+            avg_score_univ = mean(meanscore_univ)) 
+
+evals_score <- evals_score |> 
+  mutate(Question_abbrv_2 = fct_relevel(Question_abbrv, 
+         c("6c. Effective",
+           "6b. Recommend Course",
+           "6a. Recommend Instructor",
+           "5c. Constructive Assessment",
+           "5b. Timely Assessment", 
+           "5a. Fair Assessment",
+           "3. Conducive", 
+           "2. Organized", 
+           "1. Valuable"))) 
+
+ggplot(evals_score, aes(x= avg_score, y= Question_abbrv_2)) +
+  geom_point(aes(color = `Course Number`)) + 
+  geom_point(aes(x = avg_score_univ, y = Question_abbrv_2), shape = 8) +
+  scale_colour_viridis_d(option = "plasma") +
+  labs(x = "average score",
+       y = "Question") + 
+  theme_minimal()
+
+
+```
+
+## Question 3a.
+
+The professor seems to have strength in the following questions:
+
+a\. Question 2. Effectively organized
+
+b\. Question 5b. Timely Assessment of Student Work
+
+The professor seems to have weaknesses in the following questions:
+
+a\. Question 5c. Constructive Assessment of Student Work
+
+b\. Question 5a. Fair Assessment of Student work
+
+The professor tends to get higher scores for:
+
+a\. 234: Data Science
+
+b\. 4005: Data Visualization c. 213: Regression and Modeling
+
+The professor tends to get lower scores for:
+
+a\. 113: Intro Stat
+
+## Question 3b.
+
+1.  A Likert scale is scale that ranks or scales responses or data.
+
+2.  That the scale items are is evenly spaced
+
+## Question 4
+
+```{r}
+
+evals_distr <- evals_abbrv |> 
+  filter (`Course Number` == "234") |>
+  pivot_longer(cols = c(5, 6, 7, 8, 9, 10, 11), 
+               names_to = "Response", values_to = "Score") |>
+  mutate(Response = fct_relevel(Response, 
+                                c("Agree strongly",
+                                  "Agree",
+                                  "Agree Somewhat", 
+                                  "Neutral",
+                                  "Disagree Somewhat", 
+                                  "Disagree", 
+                                  "Disagree Strongly")))
+
+ggplot(evals_distr, aes(x= Response, y = Score)) + 
+  geom_col(aes(fill = Response)) + 
+  coord_flip() +
+  facet_wrap(Question_abbrv ~ `Course Section Number` ~ Term) +
+  scale_colour_brewer(palette = "Dark2") +
+  theme_bw()
+
+```
+
+## Question 5
+
+```{r}
+
+evals_abbrv |> 
+  filter(Question_abbrv == "3. Conducive") |> 
+  group_by(`Course Number`) |> 
+  summarise(average_response = mean(meanscore_prof), num_respones = sum(n)) 
+
+```
+
+## Question 6
+
+Throughout two years 2020 and 2021, the students mostly agree strongly
+on all of the questions. In the Fall of 2021 the question that asks if
+the environment is conducive for learning is the only that has a neutral
+response. Stat 234 always has the highest average response score
+suggesting that Stat 234 appears to be a better class than the rest.
+Stat has the lowest average response score.
+
+```{r}
+agreeance_levels <- c("disagree_strongly", "disagree",
+                      "disagree_somewhat", "neutral",
+                      "agree_somewhat", "agree", "agree_strongly")
+
+instructor_df <- 
+  tibble(type = c(rep("instructor", 3), "university"),
+                        level = c("all", "100-level", "200-level", "all"),
+                        agree_strongly = c(56.3, 53.2, 62.9, 51.2),
+                        agree = c(29.3, 28.6, 30.9, 27),
+                        agree_somewhat = c(7.7, 9.9, 3.1, 8.1),
+                        neutral = c(3.0, 3.4, 2.1, 6),
+                        disagree_somewhat = c(1.3, 1.5, 1.0, 2.7),
+                        disagree = c(1.3, 2.0, 0, 2.6),
+                        disagree_strongly = c(1.0, 1.5, 0, 2.4),
+                        count = c(300, 203, 97, 30153)) |> 
+  pivot_longer(3:9, values_to = "percentage", names_to = "agreeance") |>
+  mutate(agreeance = fct_relevel(agreeance, agreeance_levels))
+
+instructor_df
+
+
+```
+
+## Question 7
+
+```{r}
+## 1
+all_graph <- instructor_df |> 
+  filter(level == "all") |>
+  group_by(type)
+
+ggplot(all_graph, aes(x= agreeance, y = percentage, fill = type)) +
+  geom_col(position = "dodge") + 
+  scale_colour_brewer(palette = "Dark2")
+
+## 2
+
+level_graph <- instructor_df |> 
+  filter(level == "100-level"| level == "200-level")
+
+ggplot(level_graph, aes(x= agreeance, y = percentage)) + 
+  geom_col(position = "dodge", aes(fill = level)) + theme_minimal()
+
+```
+
+## Question 8
+
+The instructor appears to have a higher percentage for scoring high on the agree and strongly scale. This is suggesting that the instructor on average is doing better than the university averages. The instructor appears to be a better instructor in 200-level courses because they have a higher percentage score on the strongly agree and agree scale. The percentage for strongly disagree and disagree are very small for 200-level courses furthering suggesting the instructor is a better instructor in 200-level courses. This maybe be because that most people that who take the 200-level courses are usually people planning to major in the related area as opposed to people taking 100-level courses which tend to have different majors who might not have the same inclination to enjoy, appreciate and acknowledge the efforts of the instructor. 
