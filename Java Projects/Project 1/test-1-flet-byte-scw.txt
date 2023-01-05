@@ -1,0 +1,9 @@
+6
+// flet to byte in stack mode with changes only
+// flet -> nlet -> nlyt -> nyle -> byle -> byte
+flet
+nlet
+nlyt
+nyle
+byle
+byte
