@@ -1,0 +1,342 @@
+---
+title: "Final Project"
+author: "RodricK Mpofu"
+execute:
+  echo: true
+  warning: false
+format: 
+  html:
+    theme: yeti
+    self-contained: true
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+Statement of Integrity: "All work presented is my own, and I have
+followed all rules for collaboration. I have not discussed this project
+with anyone outside of students currently enrolled in this course, and I
+have listed any such students at the top of my project."
+
+Signed by: Rodrick Mpofu
+
+## Introduction
+
+The dataset used in this project was retrieved from Kaggle under the,
+"Heart Failure Prediction" dataset. The cases in this dataset are the
+918 patients used in the study. The variables that are found in the
+dataset include:
+
+-   1\. Age: age of the patient \[years\]
+
+-   2\. Sex: sex of the patient \[M: Male, F: Female\]
+
+-   3\. ChestPainType: chest pain type \[TA: Typical Angina, ATA:
+    Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic\]
+
+-   4\. RestingBP: resting blood pressure \[mm Hg\]
+
+-   5\. Cholesterol: serum cholesterol \[mm/dl\]
+
+-   6\. FastingBS: fasting blood sugar \[1: if FastingBS \> 120 mg/dl,
+    0: otherwise\]
+
+-   7\. RestingECG: resting electrocardiogram results \[Normal: Normal,
+    ST: having ST-T wave abnormality (T wave inversions and/or ST
+    elevation or depression of \> 0.05 mV), LVH: showing probable or
+    definite left ventricular hypertrophy by Estes' criteria\]
+
+-   8\. MaxHR: maximum heart rate achieved \[Numeric value between 60
+    and 202\]
+
+-   9\. HeartDisease: output class \[1: heart disease, 0: Normal\]
+
+The link to the data set:
+[Heart_failure_dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction).
+
+The initial questions I have:
+
+1.  What is the distribution of the different chest types across
+    variables like age and sex?
+
+2.  If I am to use knn model to predictor where someone has a heart
+    disease or not, what predictors will be usual and what k value can I
+    use?
+
+3.  What is the distribution of the maximum heart rate across different
+    ages and sex?
+    
+4.  Are the cholesterol values higher in males or females?
+    
+5.  Are females more likely to have heart-related diseases than males?
+    
+6.  Does the type of chest pain influence the maximum heart rate
+  
+
+I will be looking at all the variables and see if I can see which ones
+give me a higher classification rate for my knn model. So basically,
+every variable in this dataset is of interest.
+
+## Reading in the data
+
+```{r Reading in data}
+library(tidyverse)
+library(here)
+heart_disease_df <- read_csv(here("data/heart_Disease_Dataset_Kaggle.csv"), 
+                             col_types = cols(Age = col_double(),
+  Sex = col_factor(),
+  ChestPainType = col_factor(levels = NULL, ordered = FALSE, include_na = FALSE),
+  RestingBP = col_double(),
+  Cholesterol = col_double(),
+  FastingBS = col_factor(),
+  RestingECG = col_factor(),
+  MaxHR = col_double(),
+  ExerciseAngina = col_factor(),
+  Oldpeak = col_double(),
+  ST_Slope = col_factor(),
+  HeartDisease = col_factor(levels = NULL, ordered = FALSE, include_na = FALSE)))
+  
+
+head(heart_disease_df)
+```
+
+
+## Check for missing values
+
+```{r Check for missing values}
+sum(is.na(heart_disease_df))
+```
+
+The data set seems to not have any  missing values.
+
+## Exploratory Analysis
+
+```{r Data exploration}
+
+ggplot(heart_disease_df, aes(x= Age, y = ChestPainType)) +
+  geom_boxplot(aes(color = Sex)) +
+  scale_colour_brewer(palette = "Accent")
+
+ggplot(heart_disease_df, aes(x= Age, y = MaxHR)) +
+  geom_point(aes(color = Sex)) + 
+  scale_colour_brewer(palette = "Accent") +
+  facet_wrap(~Sex) + 
+  geom_smooth()
+
+
+ggplot(heart_disease_df, aes(x= Age, y = Cholesterol, color = Sex, shape = Sex)) +
+  geom_point() + 
+  geom_smooth(color = "purple") +
+  scale_colour_brewer(palette = "Accent") +
+  facet_wrap(~Sex)
+
+##  Proportion of Heart disease between Sex 
+ggplot(data = heart_disease_df, aes(x = Sex, fill = HeartDisease)) +
+  geom_bar(position = "fill") +
+  ylab("Proportion")
+
+
+library(GGally)
+
+## pie chart 
+
+pie1<- heart_disease_df |> 
+  select(ChestPainType, HeartDisease, Sex) |>
+  group_by(HeartDisease, Sex) |>
+  summarise(n = n()) |>
+  mutate(perc = (n/sum(n)) * 100)
+
+ggplot(pie1, aes(x = "", y = perc, fill = Sex)) +
+  geom_col() +
+  geom_label(aes(label = round(perc, digits=2)),
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE,
+              )+
+  coord_polar(theta = "y") + 
+  facet_wrap(~ HeartDisease)
+
+library(GGally)
+
+ggpairs(data = heart_disease_df, columns = c(3, 5, 8, 4, 1, 12), 
+        lower = list(combo = wrap(ggally_facethist, bins = 15)),
+        mapping = aes(color = HeartDisease))
+
+ggpairs(data = heart_disease_df, columns = c(6, 7, 9, 10, 11, 2, 12), 
+        lower = list(combo = wrap(ggally_facethist, bins = 15)),
+        mapping = aes(color = HeartDisease))
+
+
+ggplot(heart_disease_df, aes(x = ChestPainType, y = MaxHR)) +
+  geom_boxplot()
+
+
+ggplot(heart_disease_df, aes(x = RestingECG, y = MaxHR)) +
+  geom_boxplot()
+
+ggplot(heart_disease_df, aes(x = ExerciseAngina, y = MaxHR)) +
+  geom_boxplot()
+
+ggplot(heart_disease_df, aes(x = ExerciseAngina, y = Age)) +
+  geom_boxplot()
+
+ggplot(heart_disease_df, aes(x = ST_Slope, y = Oldpeak)) +
+  geom_boxplot()
+
+ggplot(heart_disease_df, aes(x = Oldpeak)) +
+  geom_boxplot()
+
+## pie chart 
+
+pie1<- heart_disease_df |>
+  group_by(RestingECG, HeartDisease) |>
+  select(RestingECG, HeartDisease) |>
+  summarise(n = n()) |>
+  mutate(perc = (n/sum(n)) * 100)
+
+ggplot(pie1, aes(x = "", y = perc, fill = HeartDisease)) +
+  geom_col(color = "black") +
+  geom_label(aes(label = round(perc, digits=2)),
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE) +
+  coord_polar(theta = "y") + 
+  facet_wrap(~RestingECG)
+
+```
+
+Initially upon inspection there seems to be no significant difference in chest pain types across sex. There is however a notable different in median age for the different chest pain types. Additionally, the graph of age versus maximum heart rate suggests that there is a significant different in maximum heart between male and female patients. As age increases for patients the maximum heart rate for male patients decreases more drastically as compared to female identifying patients. The scatter plot of cholesterol versus age shows a lot of out lies that are in the data set. However, the bar plot shows that the Females are less likely than males to have cardiovascular diseases because of the smaller proportion. The pie furthers shows the proportions of the patients that have heart disease or not between male and female patients. Chest pain type seems to have some influence on the maximum heart rate as there is a difference between median maximum heart rates between the different chest pain type. Patients having ST-T wave abnormality seem to have a higher proportion of heart disease as compared to patients with the other two resting ECG categories.
+
+## Data cleaning
+
+Since data showed a lot of outliers I decided to clean or remove the outliers. This is to eventually help the improve the my predictions with the knn model.
+
+```{r Data cleaning}
+
+age_outliers <- boxplot.stats(heart_disease_df$Age)$out
+
+restingBP_outliers <- boxplot.stats(heart_disease_df$RestingBP)$out
+
+choles_outliers <- boxplot.stats(heart_disease_df$Cholesterol)$out
+
+maxHR_outliers <- boxplot.stats(heart_disease_df$MaxHR)$out
+
+oldPeak_outliers <- boxplot.stats(heart_disease_df$Oldpeak)$out
+
+
+## which function to find which row 
+outlier_row <- which(heart_disease_df$RestingBP %in% c(restingBP_outliers) |
+                       heart_disease_df$Cholesterol %in% c(choles_outliers) |
+                        heart_disease_df$MaxHR %in% c(maxHR_outliers) |
+                        heart_disease_df$Oldpeak %in% c(oldPeak_outliers))
+
+heart_disease_df_no_outliers <-heart_disease_df[-outlier_row, ]
+
+boxplot(heart_disease_df_no_outliers[, c("Age", "RestingBP", "Cholesterol", "MaxHR", "Oldpeak")])
+
+## Cholesterol seems to still have outliers
+
+summary(heart_disease_df_no_outliers$Cholesterol)
+
+heart_disease_df_no_2 <- 
+  heart_disease_df_no_outliers |> filter(Cholesterol > 206 & Cholesterol < 272)
+
+summary(heart_disease_df_no_2$Cholesterol)
+
+boxplot(heart_disease_df_no_2[, c("Age", "RestingBP", "Cholesterol", "MaxHR", "Oldpeak")])
+
+```
+
+After the data was cleaned it shows that the variables no long have outliers because the boxplot show no outliers above or below the whiskers of the plot.
+
+## Knn training
+
+```{r Splitting into training and test sample}
+set.seed(10294119)
+
+## take 65% for training
+heart_train <- heart_disease_df_no_2 |> 
+  slice_sample(n = nrow(heart_disease_df_no_2) * 0.65)
+heart_test <- anti_join(heart_disease_df_no_2, heart_train)
+
+head(heart_train)
+
+head(heart_test)
+
+```
+The data set was then divided into two, the training data sample and test data sample
+to use in the knn model. Because we use variables to predict if a patient has heart disease or not, these columns measurements vary in scales and sizes and thus we need to scale all the quantitative variables to get a better sense of the variables.
+
+```{r knn on Training Data}
+
+## scale any/all candidate predictors in both the training 
+## and the test data sets before you fit the knn model.
+
+
+heart_train_scaled<- heart_train |> 
+  mutate(across(where(is.numeric), ~ (.x - min(.x)) /
+                                 (max(.x) - min(.x)))) 
+
+heart_test_scaled<- heart_test |> 
+  mutate(across(where(is.numeric), ~ (.x - min(.x)) /
+                                 (max(.x) - min(.x))))
+
+library(class)
+## create a data frame that only has the predictors
+## that we will use
+heart_train_knn <- heart_train_scaled |> 
+  select(MaxHR, Cholesterol, RestingBP, FastingBS, Age)
+heart_test_knn <- heart_test_scaled |> 
+  select(MaxHR, Cholesterol, RestingBP, FastingBS, Age)
+
+
+## put our response variable into a vector
+train_cat <- heart_train_scaled$HeartDisease
+test_cat <- heart_test_scaled$HeartDisease
+
+## function
+get_class_rate <- function(k = 10) {
+
+knn_model <- 
+  knn(train = heart_train_knn, test = heart_test_knn, cl = train_cat, k = 10)
+
+res_tab1 <- table(knn_model, test_cat)
+return(sum(diag(res_tab1)) / sum(res_tab1))
+}
+
+
+class_rates <- map(1:100, get_class_rate) |> unlist()
+class_rate_df <- tibble(ks = 1:100, class_rates)
+
+ggplot(data = class_rate_df,
+       aes(x = ks, y = class_rates)) +
+  geom_line()
+
+class_rate_df |> filter(class_rates == max(class_rates))
+
+```
+
+### Confusion Matrix
+
+```{r Confusion Matrix}
+knn_model_2 <- knn(train = heart_train_knn, test = heart_test_knn,
+                   cl = train_cat, k = 41)
+
+res_tab1_2 <- table(knn_model_2, test_cat)
+diag_value <- sum(diag(res_tab1_2)) / sum(res_tab1_2)
+
+diag_value
+
+off_diag_value <- 1 - diag_value
+
+off_diag_value
+
+res_tab1_2 
+```
+
+The columns of the confusion matrix give the actual heart disease in the test data while the rows give the predicted types from our knn model. The above table tells us that there were 39 patients that the sample correctly predicted that they did not have heart disease. In other words, correct predictions appear on the diagonal, while incorrect predictions appear on the off-diagonal. Therefore our classification rate, the number of correct classifications divided by the total number of observations in the test data set, is 0.5984. The off diagonal value is 0.4016. This refers to the number of incorrect classifications divided by the number of observations in the data set.
+
+## Conclusion and Summary
+
+In conclusion, the model gave a classification rate of 0.5984 given a k value of 41 using maximum heart rate, cholesterol, resting blood pressure, fastingBS, age as predictors. Through analysis I discovered that the cholesterol values  are higher in female identifying people. Females are less likely than males to have cardiovascular diseases.  Based on the dataset, ATA type of chest pain has more heart rate ( patients with ATA should be put on a medication and special medical attention to reduce their risk of disease). I realized that the data set may have been small for knn modeling as it requires a larger data set. I also had limited knowledge of other variables such as Old peak and St slope limiting the scope of my analysis. I also would like to carry on the project looking at other modeling tools. If I had more time and knowledge I would have wanted to maybe look at the p-value of each predictor and more objectively make a decision on whether to remove the predictor or not.
+
+
+

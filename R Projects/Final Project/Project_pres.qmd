@@ -1,0 +1,197 @@
+---
+title: "Heart Disease Predictor"
+author: "Rodrick Mpofu"
+date: December 7, 2022
+format: 
+  revealjs:
+    theme: serif
+output:
+  revealjs::revealjs_presentation:
+    transition: fade
+    background_transition: slide
+---
+
+## Heart Disease Introduction {.smaller background-image="https://pin.it/6p9yshr" background-size="100px" background-repeat="repeat"}
+
+-   918 patients
+
+-   Data from Kaggle collected from five datasets around the world:
+
+    -   Cleveland: 303 observations
+    -   Hungarian: 294 observations
+    -   Switzerland: 123 observations
+    -   Long Beach VA: 200 observations
+    -   Stalog (Heart) Data Set: 270 observations
+
+## Variables of interest {.smaller}
+
+-   Variables of interest
+    -   `Age`: age of the patient \[years\]
+
+    -   `Sex`: sex of the patient \[M: Male, F: Female\]
+
+    -   `ChestPainType`: chest pain type \[TA: Typical Angina, ATA: Atypical Angina, NAP: Non-Anginal Pain, ASY: Asymptomatic\]
+
+    -   `RestingBP`: resting blood pressure \[mm Hg\]
+
+    -   `Cholesterol`: serum cholesterol \[mm/dl\]
+
+    -   `FastingBS`: fasting blood sugar \[1: if FastingBS \> 120 mg/dl, 0: otherwise\]
+
+    -   `RestingECG`: resting electrocardiogram results \[Normal: Normal, ST: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of \> 0.05 mV), LVH: showing probable or definite left ventricular hypertrophy by Estes' criteria\]
+
+    -   `MaxHR`: maximum heart rate achieved \[Numeric value between 60 and 202\]
+
+    -   `HeartDisease`: output class \[1: heart disease, 0: Normal\]
+
+## Questions that I had {.smaller}
+
+-   Are the cholesterol values higher in males or females?
+    -   They are higher in female identifying people.
+-   Are females more likely to have Exercise Angina?
+    -   Males has more likely to have exercise Angina
+-   Are females more likely to have heart-related diseases than males?
+    -   Females are less likely than males to have cardiovascular diseases
+-   Does the type of chest pain influence the maximum heart rate
+    -   Based on the dataset, ATA type of chest pain has more heart rate ( patients with ATA should be put on a medication and special medical attention to reduce their risk of disease)
+
+## Data Exploration {.smaller}
+
+### Age Distribution
+```{r}
+library(tidyverse)
+library(here)
+heart_disease_df <- read_csv(here("data/heart_Disease_Dataset_Kaggle.csv"), 
+                             col_types = cols(Age = col_double(),
+  Sex = col_factor(),
+  ChestPainType = col_factor(levels = NULL, ordered = FALSE, include_na = FALSE),
+  RestingBP = col_double(),
+  Cholesterol = col_double(),
+  FastingBS = col_factor(),
+  RestingECG = col_factor(),
+  MaxHR = col_double(),
+  ExerciseAngina = col_factor(),
+  Oldpeak = col_double(),
+  ST_Slope = col_factor(),
+  HeartDisease = col_factor(levels = NULL, ordered = FALSE, include_na = FALSE)))
+
+age_outliers <- boxplot.stats(heart_disease_df$Age)$out
+
+restingBP_outliers <- boxplot.stats(heart_disease_df$RestingBP)$out
+
+choles_outliers <- boxplot.stats(heart_disease_df$Cholesterol)$out
+
+maxHR_outliers <- boxplot.stats(heart_disease_df$MaxHR)$out
+
+oldPeak_outliers <- boxplot.stats(heart_disease_df$Oldpeak)$out
+
+
+## which function to find which row 
+outlier_row <- which(heart_disease_df$RestingBP %in% c(restingBP_outliers) |
+                       heart_disease_df$Cholesterol %in% c(choles_outliers) |
+                        heart_disease_df$MaxHR %in% c(maxHR_outliers) |
+                        heart_disease_df$Oldpeak %in% c(oldPeak_outliers))
+
+heart_disease_df_no_outliers <-heart_disease_df[-outlier_row, ]
+
+## Cholesterol seems to still have outliers
+
+heart_disease_df_no_2 <- 
+  heart_disease_df_no_outliers |> filter(Cholesterol > 206 & Cholesterol < 272)
+
+ggplot(heart_disease_df_no_2, aes(x=Age)) +
+  geom_histogram(binwidth = 2, colour = "black", fill = "green")
+  
+```
+
+## Cholesterol vs. Age between sex
+
+```{r}
+
+
+ggplot(heart_disease_df_no_2, aes(x= Age, y = Cholesterol, color = Sex, shape = Sex)) +
+  geom_point() + 
+  geom_smooth(color = "purple") +
+  scale_colour_brewer(palette = "Accent") +
+  facet_wrap(~Sex) 
+```
+
+## Proportion of Heart disease between Sex {.smaller}
+
+```{r}
+
+ggplot(data = heart_disease_df_no_2, aes(x = Sex, fill = HeartDisease)) +
+  geom_bar(position = "fill") +
+  ylab("Proportion")
+
+```
+
+## Proportion of Heart disease between Sex {.smaller}
+
+```{r}
+library(GGally)
+
+## pie chart 
+
+pie1<- heart_disease_df_no_2 |> 
+  select(ChestPainType, HeartDisease, Sex) |>
+  group_by(HeartDisease, Sex) |>
+  summarise(n = n()) |>
+  mutate(perc = (n/sum(n)) * 100)
+
+ggplot(pie1, aes(x = "", y = perc, fill = Sex)) +
+  geom_col() +
+  geom_label(aes(label = round(perc, digits=2)),
+             position = position_stack(vjust = 0.5),
+             show.legend = FALSE,
+              )+
+  coord_polar(theta = "y") + 
+  facet_wrap(~ HeartDisease)
+
+```
+
+## ChestPain type vs MaxHR {.smaller}
+
+```{r}
+
+ggplot(heart_disease_df_no_2, 
+       aes(x = ChestPainType, y = MaxHR, color= Sex)) +
+  geom_boxplot()
+
+```
+
+## Heatmap
+
+```{r}
+# library(tidyverse)
+# heat <- heart_disease_df_no_2[ , c(1, 10, 6, 4, 8, 5, 12)] |>
+#   mutate(Age = as.factor(Age),
+#          Oldpeak = as.factor(Oldpeak),
+#          RestingBP = as.factor(RestingBP),
+#          MaxHR = as.factor(MaxHR),
+#          Cholesterol = as.factor(Cholesterol))
+# library(reshape2)
+# 
+# data_h <- cor(heart_disease_df_no_2[sapply
+#                                     (heart_disease_df_no_2,is.numeric)])
+# data1<- melt(data_h)
+# 
+# 
+# ggplot(data1, aes(x = Var1,
+#                   y = Var2,
+#                   fill = value))+
+#   geom_tile() + 
+#   scale_fill_gradient2(limit = c(-1,1))
+
+library(corrplot)
+
+M<- cor(heart_disease_df_no_2[ , c(1, 10, 4, 8)],  
+    use = "everything")
+
+corrplot(M, method="color")
+
+```
+
+## Conclusion
+
+#### Thank you
