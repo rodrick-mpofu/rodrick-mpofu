@@ -1,0 +1,271 @@
+---
+title: "Project 3"
+author: "RodricK Mpofu"
+execute:
+  echo: true
+  warning: false
+output: 
+  theme: yeti
+format: 
+  html:
+    self-contained: true
+---
+
+Statement of Integrity: "All work presented is my own, and I have followed all rules for collaboration. I have not discussed this project with anyone outside of students currently enrolled in this course, and I have listed any such students at the top of my project."
+
+Signed by: Rodrick Mpofu
+
+## Introduction
+
+The data set used in this project comes from Spotify. It contains data on 20000 songs that includes details such as energy, key, loudness, mode, and speechiness. The goal for the project is to predict the playlist_genre, the general genre of the song, from characteristics of the songs with a k-nearest-neighbors model.
+
+```{r Reading in the spotify data}
+library(tidyverse)
+library(here)
+spotify_df <- read_csv(here("data/spotify_p3.csv"))
+spotify_df
+
+```
+
+## Data Exploration
+
+```{r Splitting into training and test sample}
+
+## run the set.seed(10294119) function first when you 
+## do this so that we all have the same training and test data.
+set.seed(10294119)
+spotify_train <- spotify_df |> slice_sample(n = 15000)
+spotify_test <- anti_join(spotify_df, spotify_train)
+
+```
+
+The data was split into two by taking the first 15000 rows and this will be the training data set. The test data set will be the remaining rows that are made through an anti join that keeps all the rows that are in the original spotify data frame and are not in the training data set.
+
+```{r Training Set Exploration}
+
+## Plot of playlist_genre vs danceability
+## This is using a boxplot
+## It appears to be useful because of the difference of the median
+## and the lower quartiles across the boxplots
+
+ggplot(spotify_train, aes(x = playlist_genre, y = energy)) + 
+  geom_boxplot()
+
+
+## Plot of playlist_genre vs key
+## This is using a boxplot
+## It appears some what useful because there is a slight difference in the medians
+## for edm and other genres for example.
+
+ggplot(spotify_train, aes(x = playlist_genre, y = key)) + 
+  geom_boxplot()
+
+
+## Plot of playlist_genre vs loudness
+## This is using boxplots
+## It appears to be useful because there is a clear difference in medians
+
+ggplot(spotify_train, aes(x = playlist_genre, y = loudness)) + 
+  geom_boxplot() + 
+  ## this will allow zooming in the plot while the underlying data is not changed
+  coord_cartesian(ylim = c(0, -10))  
+
+
+## Plot of playlist_genre vs acousticness
+## This is using boxplots
+## It appears to be very useful becuse of the very clear differences in medians
+
+ggplot(spotify_train, aes(x = playlist_genre, y = acousticness)) + 
+  geom_boxplot()
+
+
+## Plot of playlist_genre vs instrumentalness
+## This is also using boxplots
+## It appears to be somewhat useful because it 
+## shows a small difference in medians across the genres
+
+ggplot(spotify_train, aes(x = playlist_genre, y = instrumentalness)) + 
+  geom_boxplot() +  coord_cartesian(ylim = c(0, 0.005))
+
+## Plot of playlist_genre vs liveness
+## This is also a boxplot
+## It appears to not be very useful because the difference between the medians
+## is very small.
+
+ggplot(spotify_train, aes(x = playlist_genre, y = liveness)) + 
+  geom_boxplot() 
+
+## Plot of playlist_genre vs valence
+## This also a boxplot
+## It appears to be useful because the difference 
+## in medians is more clear and large enough
+
+ggplot(spotify_train, aes(x = playlist_genre, y = valence)) + 
+  geom_boxplot()
+
+
+## Plot of playlist_genre vs tempo
+## This is also a boxplot
+## It appears to be useful because the difference in medians across each genre
+
+ggplot(spotify_train, aes(x = playlist_genre, y = tempo)) + 
+  geom_boxplot()
+
+
+## Plot of playlist_genre vs duration_ms
+## This a also boxplot
+## It appears to be somewhat useful because there 
+## is a somewhat clear difference in medians
+
+ggplot(spotify_train, aes(x = playlist_genre, y = duration_ms)) + 
+  geom_boxplot()
+
+
+## Plot of playlist_genre vs track_popularity
+## This is also a boxplot
+## It appears to be very useful because of the difference in medians is really significant
+
+ggplot(spotify_train, aes(x = playlist_genre, y = track_popularity)) + 
+  geom_boxplot()
+
+
+## Plot of playlist_genre vs mode
+## This is a bar plot
+## It appears to be useful because pop and 
+## rock seem to have higher proportions of 
+## mode in the dataset
+ggplot(spotify_train, aes(x = playlist_genre, y = mode)) + 
+  geom_col()
+
+## Plot of playlist_genre vs speechiness
+## This uses a boxplot and bar plot
+## It appears to be useful because rap appears 
+## to have more spoken words in a track compared to other genres
+
+ggplot(spotify_train, aes(x = playlist_genre, y = speechiness)) + 
+  geom_col()
+ggplot(spotify_train, aes(x = playlist_genre, y = speechiness)) + 
+  geom_boxplot()
+
+
+## a scatterplot matrix (pairs plot) with the GGally package that has 3 or 4 candidate predictors, along with playlist_genre
+
+library(GGally)
+## instrumentalness, valence and tempo
+ggpairs(data = spotify_train, columns = c(19, 21, 22, 10), 
+        lower = list(combo = wrap(ggally_facethist, bins = 15)),
+        mapping = aes(color =playlist_genre))
+
+
+## energy, accousticness, track_popularity
+ggpairs(data = spotify_train, columns = c(13, 18, 4, 10), 
+        lower = list(combo = wrap(ggally_facethist, bins = 15)),
+        mapping = aes(color =playlist_genre))
+
+
+```
+
+From the boxplots and bar plots above, it apparent that there other predictors that appear to be more useful. Predictors such as energy, acousticness, instrumentalness, valence, tempo, track popularity, and speechiness will be used in my initial model.
+
+## Methods
+
+Since the goal is to predict the playlist_genre, the general genre of the song, from characteristics of the songs with a k-nearest-neighbors model. I might need to explain what a k-nearest-neighbors model is. It is a machine learning algorithm or model that is used for classification and regression. This means that it is used to predict a response variable given a two or more variables. The response variable can be either categorical or quantitative. This algorithm relies on distance for classifying test data. Given an integer k, we can use this to predict the response is we look at what the k nearest neighbors are or observations are. To use a knn model or any predictive/classification model we need to have a train sample and test sample. The train sample is the subset data set from the original data set that we use to fit or train the model. While the test sample is the one that we use to test or access the performance or accuracy of our model. We need to use these separately because it would not make sense for us to use the same data set to train and test because that would give a higher accuracy which is false. We have to use data that is new to the model. Because we use distance between points to predicts, these distances can vary in scales and sizes and thus we need to scale all the quantitative variables to get a better sense of the distance of the points.
+
+```{r knn on Training Data}
+
+## scale any/all candidate predictors in both the training 
+## and the test data sets before you fit the knn model.
+
+spotify_train_scaled<- spotify_train |> 
+  mutate(across(where(is.numeric), ~ (.x - min(.x)) /
+                                 (max(.x) - min(.x)))) 
+
+spotify_test_scaled<- spotify_test |> 
+  mutate(across(where(is.numeric), ~ (.x - min(.x)) /
+                                 (max(.x) - min(.x))))
+
+library(class)
+## create a data frame that only has the predictors
+## that we will use
+spotify_train_knn <- spotify_train_scaled |> 
+  select(energy, acousticness, track_popularity, 
+         instrumentalness, valence, tempo, 
+         speechiness, duration_ms, mode, loudness)
+spotify_test_knn <- spotify_test_scaled |> 
+  select(energy, acousticness, track_popularity, 
+         instrumentalness, valence, tempo, 
+         speechiness, duration_ms, mode, loudness)
+
+
+## put our response variable into a vector
+train_cat <- spotify_train_scaled$playlist_genre
+test_cat <- spotify_test_scaled$playlist_genre
+
+## function
+get_class_rate <- function(k = 10) {
+
+knn_model <- knn(train = spotify_train_knn, test = spotify_test_knn,
+                   cl = train_cat, k = k)
+
+res_tab1 <- table(knn_model, test_cat)
+sum(diag(res_tab1)) / sum(res_tab1)
+}
+
+class_rates <- map(1:100, get_class_rate) |> unlist()
+class_rate_df <- tibble(ks = 1:100, class_rates)
+
+ggplot(data = class_rate_df,
+       aes(x = ks, y = class_rates)) +
+  geom_line()
+
+class_rate_df |> filter(class_rates == max(class_rates))
+
+## I end up choosing k = 60
+
+```
+
+## Results
+
+-   For my final model I used the following predictors:
+    -   energy,
+    -   acousticness,
+    -   track_popularity,
+    -   instrumentalness,
+    -   valence,
+    -   tempo,
+    -   speechiness,
+    -   duration_ms,
+    -   mode,
+    -   loudness
+
+I also selected a k = 60 because it gave the highest classification rate.
+
+# Confusion matrix
+
+```{r Confusion Matrix}
+knn_model_2 <- knn(train = spotify_train_knn, test = spotify_test_knn,
+                   cl = train_cat, k = 60)
+
+res_tab1_2 <- table(knn_model_2, test_cat)
+diag_value <- sum(diag(res_tab1_2)) / sum(res_tab1_2)
+
+off_diag_value <- 1 - diag_value
+
+res_tab1_2
+```
+
+The columns of the confusion matrix give the actual playlist genre in the test data while the rows give the predicted types from our knn model. The above table tells us that there were 465 songs that were edm genre tracks that our knn model correctly classified as edm. There were 97 songs/tracks that were edm that our knn model incorrectly classified as latin. There were 154 tracks that were edm and that our knn model incorrectly classified as pop. In other words, correct predictions appear on the diagonal, while incorrect predictions appear on the off-diagonal. Therefore our classification rate, the number of correct classifications divided by the total number of observations in the test data set, is 0.4358. The off diagonal value is 0.5642. This refers to the number of incorrect classifications divided by the number of observatiobs in the data set.
+
+```{r Evaluate Your Model}
+
+
+obj <- list(training = spotify_train_knn,
+     cl = train_cat,
+     k = 60,
+     student_name = "Rodrick Mpofu")
+saveRDS(obj, file = "Mpofu_Rodrick.RData")
+```
+
+## Conclusion
+
+In conclusion, the model gave a classification rate of 0.4358 given a k value of value and using energy, acousticness, track_popularity, instrumentalness, valence, tempo, speechiness, duration_ms, mode and, loudness as predictors. If I had more time and knowledge I would have wanted to maybe look at the p-value of each predictor and more objectively make a decision on whether to remove the predictor or not.
