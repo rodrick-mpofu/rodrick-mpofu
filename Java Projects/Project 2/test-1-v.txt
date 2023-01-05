@@ -1,0 +1,18 @@
+COMMENT:   Debug  example,   TL   mode   generating   some   orders.
+MODE:   TL
+NUM_TRADERS:   8
+NUM_STOCKS:   5
+0   SELL   T0   S0   $1251   #10
+0   SELL   T1   S2   $12   #10
+0   SELL   T0   S0   $1253   #10
+0   SELL   T2   S1   $125234253   #10
+0   SELL   T1   S0   $125   #10
+0   SELL   T3   S2   $1251   #10
+1   SELL   T2   S1   $12513   #10
+2   SELL   T0   S3   $1225   #10
+7   SELL   T4   S4   $12325   #10
+10   SELL   T0   S0   $13125   #101
+12   SELL   T1   S1   $1125   #10
+25   SELL   T2   S2   $1225   #10
+100  SELL   T3  S0   $12115   #10
+1000   SELL   T0   S3   $1215   #10

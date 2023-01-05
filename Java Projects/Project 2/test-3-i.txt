@@ -1,0 +1,7 @@
+COMMENT:   Debug  example,   TL   mode   generating   some   orders.
+MODE:   TL
+NUM_TRADERS:   3
+NUM_STOCKS:   1
+0   SELL   T0   S0   $125   #10
+0   BUY   T1  S0   $1   #100
+0   SELL   T2   S0   $100   #10
