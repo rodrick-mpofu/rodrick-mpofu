@@ -1,7 +1,6 @@
-- 👋 Hi, I’m @rodrick-mpofu
-- 👀 I’m interested in hip-hop music, soccer/football and dance
-- 🌱 I’m currently learning Data Science at St. Lawrence University
-- 💞️ I’m looking to collaborate on Data Science or Computer Science related projects
+- 👋 Hi
+- My name is Rodrick, I am a Data Science major at St. Lawrence University
+- I am interested soccer/football and dance
 
 <!---
 rodrick-mpofu/rodrick-mpofu is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
