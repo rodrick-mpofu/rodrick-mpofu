@@ -1,5 +1,5 @@
 - 👋 Hi
-- My name is Rodrick, I am a Data Science major at St. Lawrence University
+- My name is Rodrick, I'm a recent Data Science graduate at St. Lawrence University
 - I am interested soccer/football and dance
 
 <!---
