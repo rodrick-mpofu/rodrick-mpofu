@@ -1,8 +1,6 @@
-- 👋 Hi
-- My name is Rodrick, I'm a recent Data Science graduate at St. Lawrence University
-- I am interested soccer/football and dance
+👋 Hi there!
 
-<!---
-rodrick-mpofu/rodrick-mpofu is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-You can click the Preview link to take a look at your changes.
---->
+I'm Rodrick Mpofu, a recent Data Science graduate from St. Lawrence University.
+I’m passionate about data-driven problem solving, machine learning, and AI applications.
+
+Outside of tech, I’m a huge fan of soccer (football) and love to dance in my free time. ⚽💃
